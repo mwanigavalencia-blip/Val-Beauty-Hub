@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Glow Beauty Bookings</title>
+<style>
+:root{--bg:#fff8fb;--card:#fff;--ink:#2b1d25;--muted:#806d76;--accent:#c64f7a;--accent2:#8e3156;--line:#ead9e1;--ok:#287a52;--danger:#a62c3c}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:34px 18px;text-align:center;background:linear-gradient(135deg,#fbe4ee,#fff8fb)}
+.logo{font-size:31px;font-weight:800}.tag{color:var(--muted);margin:8px auto 18px;max-width:620px}
+.container{max-width:1000px;margin:auto;padding:20px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 5px 20px #4a18300d}
+h2{margin:4px 0 14px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.service{border:1px solid var(--line);border-radius:15px;padding:15px}.service h3{margin:0 0 5px}.price{font-weight:800;font-size:18px}.small{font-size:13px;color:var(--muted)}
+button,input,select,textarea{font:inherit}button{border:0;border-radius:11px;padding:11px 15px;background:var(--accent);color:white;font-weight:700;cursor:pointer}button.secondary{background:#f2e5eb;color:var(--accent2)}button.danger{background:var(--danger)}
+label{display:block;font-weight:700;margin:10px 0 5px}input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:white}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}.hidden{display:none}.tabs{display:flex;gap:8px;flex-wrap:wrap}.pill{display:inline-block;padding:6px 10px;border-radius:99px;background:#f5e6ec;color:var(--accent2);font-size:12px;font-weight:700}
+.booking-list{display:grid;gap:10px}.booking{border:1px solid var(--line);border-radius:13px;padding:13px;display:flex;justify-content:space-between;gap:12px;align-items:center}
+.notice{padding:11px 13px;border-radius:10px;background:#eef8f2;color:var(--ok);margin:10px 0}.error{background:#fff0f1;color:var(--danger)}
+footer{text-align:center;color:var(--muted);padding:30px}
+@media(max-width:600px){.row{grid-template-columns:1fr}.booking{display:block}.booking button{margin-top:8px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" id="businessName">Glow Beauty</div>
+  <div class="tag">Hair • Nails • Lashes — book your appointment in a few taps.</div>
+  <button onclick="scrollToBooking()">Book an appointment</button>
+</header>
+
+<main class="container">
+<section class="card">
+  <h2>Our services</h2>
+  <div class="tabs" id="categoryTabs"></div>
+  <div class="grid" id="services"></div>
+</section>
+
+<section class="card">
+  <h2>Before you book</h2>
+  <div class="grid">
+    <div><span class="pill">Deposit</span><p class="small">A deposit option can be enabled for selected services to reduce no-shows.</p></div>
+    <div><span class="pill">Cancellation</span><p class="small">Please cancel or reschedule early so another client can use the slot.</p></div>
+    <div><span class="pill">WhatsApp</span><p class="small">After booking, you can send the appointment details directly to the business on WhatsApp.</p></div>
+  </div>
+</section>
+
+<section class="card" id="bookingSection">
+  <h2>Book your slot</h2>
+  <div id="bookingNotice"></div>
+  <div class="row">
+    <div><label>Your name</label><input id="clientName" placeholder="e.g. Valencia"></div>
+    <div><label>WhatsApp number</label><input id="clientPhone" placeholder="07xx xxx xxx"></div>
+  </div>
+  <div class="row">
+    <div><label>Service</label><select id="serviceSelect"></select></div>
+    <div><label>Date</label><input id="date" type="date"></div>
+  </div>
+  <div class="row">
+    <div><label>Time</label><select id="time"></select></div>
+    <div><label>Notes</label><input id="notes" placeholder="Optional: hair length, nail design, etc."></div>
+  </div>
+  <button onclick="book()">Confirm booking</button>
+  <p class="small">Please arrive on time. A deposit can be added later if you decide to require one.</p>
+</section>
+
+<section class="card">
+  <h2>Owner dashboard</h2>
+  <p class="small">Private area for the business owner. Clients only see the public booking page.</p>
+  <div id="loginBox">
+    <label>Admin password</label>
+    <input id="adminPassword" type="password" placeholder="Enter password">
+    <button onclick="login()">Open dashboard</button>
+  </div>
+  <div id="dashboard" class="hidden">
+    <div class="tabs">
+      <button class="secondary" onclick="showAdmin('bookings')">Bookings</button>
+      <button class="secondary" onclick="showAdmin('services')">Services & prices</button>
+      <button class="secondary" onclick="showAdmin('settings')">Business settings</button>
+      <button class="secondary" onclick="showAdmin('blocked')">Blocked slots</button>
+      <button class="danger" onclick="logout()">Log out</button>
+    </div>
+    <div id="adminContent"></div>
+  </div>
+</section>
+</main>
+<footer>Booking page • Mobile friendly • Share this page in TikTok, Instagram or WhatsApp</footer>
+
+<script>
+/*
+  DEMO/STANDALONE MODE:
+  This version stores data in the browser. It is excellent for testing the design.
+  For a real public booking system where every customer sees the same calendar,
+  connect the same UI to Supabase/Firebase or a small hosted database.
+  Change ADMIN_PASSWORD before publishing.
+*/
+const DEFAULT={
+ businessName:"Glow Beauty",
+ adminPassword:"ChangeMe123!",
+ opening:"08:00", closing:"18:00",
+ services:[
+  {id:1,cat:"Hair",name:"Wash",price:300,duration:30},
+  {id:2,cat:"Hair",name:"Wash & Treatment",price:500,duration:45},
+  {id:3,cat:"Hair",name:"Plain Lines / Cornrows",price:500,duration:60},
+  {id:4,cat:"Hair",name:"Medium Knotless",price:1500,duration:180},
+  {id:5,cat:"Hair",name:"Box Braids",price:1500,duration:180},
+  {id:6,cat:"Hair",name:"Twists",price:1500,duration:150},
+  {id:7,cat:"Hair",name:"Weaving",price:1500,duration:120},
+  {id:8,cat:"Nails",name:"Plain Manicure",price:500,duration:45},
+  {id:9,cat:"Nails",name:"Gel Polish",price:700,duration:45},
+  {id:10,cat:"Nails",name:"Tips + Gel",price:1200,duration:75},
+  {id:11,cat:"Nails",name:"Acrylics",price:1500,duration:120},
+  {id:12,cat:"Nails",name:"Builder Gel",price:1500,duration:90},
+  {id:13,cat:"Nails",name:"Pedicure",price:1000,duration:60},
+  {id:14,cat:"Lashes",name:"Classic Lashes",price:1500,duration:90},
+  {id:15,cat:"Lashes",name:"Hybrid Lashes",price:2000,duration:120},
+  {id:16,cat:"Lashes",name:"Volume Lashes",price:2500,duration:135},
+  {id:17,cat:"Lashes",name:"Lash Removal",price:500,duration:30}
+ ],
+ bookings:[]
+};
+let db=JSON.parse(localStorage.getItem("beautyDB")||"null")||DEFAULT;
+function save(){localStorage.setItem("beautyDB",JSON.stringify(db))}
+function money(n){return "KSh "+Number(n).toLocaleString()}
+function render(){
+ document.getElementById("businessName").textContent=db.businessName;
+ const cats=["All",...new Set(db.services.map(s=>s.cat))];
+ document.getElementById("categoryTabs").innerHTML=cats.map(c=>`<button class="secondary" onclick="filterCat('${c}')">${c}</button>`).join("");
+ filterCat("All"); fillSelect(); fillTimes();
+}
+function filterCat(cat){
+ const list=cat==="All"?db.services:db.services.filter(s=>s.cat===cat);
+ document.getElementById("services").innerHTML=list.map(s=>`
+ <div class="service"><span class="pill">${s.cat}</span><h3>${s.name}</h3>
+ <div class="price">${money(s.price)}</div><div class="small">${s.duration} min</div></div>`).join("");
+}
+function fillSelect(){
+ document.getElementById("serviceSelect").innerHTML=db.services.map(s=>`<option value="${s.id}">${s.cat} — ${s.name} — ${money(s.price)}</option>`).join("");
+}
+function fillTimes(){
+ let out=""; for(let h=8;h<=17;h++){for(let m of [0,30]){if(h===17&&m>0)continue;let t=`${String(h).padStart(2,"0")}:${m?"30":"00"}`;out+=`<option>${t}</option>`}}
+ document.getElementById("time").innerHTML=out;
+}
+function scrollToBooking(){document.getElementById("bookingSection").scrollIntoView({behavior:"smooth"})}
+function book(){
+ const name=clientName.value.trim(), phone=clientPhone.value.trim(), sid=Number(serviceSelect.value), dateEl=document.getElementById("date"), timeEl=document.getElementById("time");
+ if(!name||!phone||!dateEl.value){bookingNotice.innerHTML='<div class="notice error">Please fill in your name, WhatsApp number and date.</div>';return}
+ const service=db.services.find(s=>s.id===sid);
+ const clash=db.bookings.some(b=>b.date===dateEl.value&&b.time===timeEl.value&&b.status!=="Cancelled");
+ if(clash){bookingNotice.innerHTML='<div class="notice error">That time is already booked. Please choose another time.</div>';return}
+ db.bookings.push({id:Date.now(),name,phone,service:service.name,serviceId:sid,date:dateEl.value,time:timeEl.value,notes:notes.value,status:"Pending"});
+ save();
+ bookingNotice.innerHTML=`<div class="notice">Booking received for ${service.name} on ${dateEl.value} at ${timeEl.value}. Please WhatsApp the business if you need help.</div>`;
+}
+function login(){
+ if(adminPassword.value!==db.adminPassword){alert("Wrong password.");return}
+ loginBox.classList.add("hidden");dashboard.classList.remove("hidden");showAdmin("bookings");
+}
+function logout(){dashboard.classList.add("hidden");loginBox.classList.remove("hidden");adminPassword.value=""}
+function showAdmin(which){
+ const el=document.getElementById("adminContent");
+ if(which==="bookings"){
+  const bs=[...db.bookings].sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  el.innerHTML=`<div class="grid">
+   <div class="service"><span class="small">Total bookings</span><h3>${db.bookings.length}</h3></div>
+   <div class="service"><span class="small">Active bookings</span><h3>${db.bookings.filter(x=>x.status!=="Cancelled").length}</h3></div>
+   <div class="service"><span class="small">Estimated sales</span><h3>${money(db.bookings.filter(x=>x.status!=="Cancelled").reduce((a,b)=>a+(db.services.find(s=>s.id===b.serviceId)?.price||0),0))}</h3></div>
+ </div><h3>Bookings (${bs.length})</h3><div class="booking-list">${
+   bs.length?bs.map(b=>`<div class="booking"><div><b>${b.name}</b> • ${b.service}<br>${b.date} at ${b.time} • ${b.phone}<br><span class="small">${b.notes||""}</span></div>
+   <button class="${b.status==="Cancelled"?"secondary":"danger"}" onclick="toggleBooking(${b.id})">${b.status==="Cancelled"?"Restore":"Cancel"}</button></div>`).join(""):"<p class='small'>No bookings yet.</p>"
+  }</div>`;
+ }else if(which==="services"){
+  el.innerHTML=`<h3>Services & prices</h3><button onclick="addService()">+ Add service</button><div class="booking-list">${db.services.map(s=>`
+   <div class="booking"><div><b>${s.cat} — ${s.name}</b><br>${money(s.price)} • ${s.duration} min</div>
+   <div><button class="secondary" onclick="editService(${s.id})">Edit</button> <button class="danger" onclick="deleteService(${s.id})">Delete</button></div></div>`).join("")}</div>`;
+ }else if(which==="blocked"){
+  db.blocked=db.blocked||[];
+  el.innerHTML=`<h3>Block a date/time</h3>
+  <div class="row"><div><label>Date</label><input id="blockDate" type="date"></div>
+  <div><label>Time</label><input id="blockTime" type="time"></div></div>
+  <label>Reason</label><input id="blockReason" placeholder="Personal day, fully booked, etc.">
+  <br><button onclick="addBlocked()">Block slot</button>
+  <div class="booking-list"><h3>Blocked slots</h3>${db.blocked.length?db.blocked.map((x,i)=>`<div class="booking"><div><b>${x.date} ${x.time}</b><br><span class="small">${x.reason||""}</span></div><button class="danger" onclick="removeBlocked(${i})">Remove</button></div>`).join(""):"<p class='small'>No blocked slots.</p>"}</div>`;
+ }else{
+  el.innerHTML=`<h3>Business settings</h3>
+  <label>Business name</label><input id="setName" value="${db.businessName}">
+  <label>Admin password</label><input id="setPass" value="${db.adminPassword}">
+  <label>Opening time</label><input id="setOpen" type="time" value="${db.opening}">
+  <label>Closing time</label><input id="setClose" type="time" value="${db.closing}">
+  <br><button onclick="saveSettings()">Save settings</button>
+  <p class="small">Important: in the standalone version the password protects the dashboard visually, but data is stored in this browser. For real security and shared bookings, use the cloud version.</p>`;
+ }
+}
+function addService(){
+ const cat=prompt("Category (Hair, Nails or Lashes):","Hair"); if(!cat)return;
+ const name=prompt("Service name:"); if(!name)return;
+ const price=Number(prompt("Price in KSh:","1000")); if(!price)return;
+ const duration=Number(prompt("Duration in minutes:","60"))||60;
+ db.services.push({id:Date.now(),cat,name,price,duration});save();showAdmin("services");render();
+}
+function editService(id){
+ const s=db.services.find(x=>x.id===id); if(!s)return;
+ const name=prompt("Service name:",s.name); if(name===null)return;
+ const price=Number(prompt("Price in KSh:",s.price)); if(!price)return;
+ const duration=Number(prompt("Duration in minutes:",s.duration))||s.duration;
+ s.name=name;s.price=price;s.duration=duration;save();showAdmin("services");render();
+}
+function deleteService(id){if(!confirm("Delete this service?"))return;db.services=db.services.filter(s=>s.id!==id);save();showAdmin("services");render()}
+function toggleBooking(id){const b=db.bookings.find(x=>x.id===id);if(!b)return;b.status=b.status==="Cancelled"?"Pending":"Cancelled";save();showAdmin("bookings")}
+
+
+function addBlocked(){
+ db.blocked=db.blocked||[];
+ const d=document.getElementById("blockDate").value,t=document.getElementById("blockTime").value,r=document.getElementById("blockReason").value;
+ if(!d||!t){alert("Choose date and time.");return}
+ if(db.blocked.some(x=>x.date===d&&x.time===t)){alert("That slot is already blocked.");return}
+ db.blocked.push({date:d,time:t,reason:r});save();showAdmin("blocked");
+}
+function removeBlocked(i){db.blocked.splice(i,1);save();showAdmin("blocked")}
+
+function saveSettings(){
+ db.businessName=document.getElementById("setName").value||db.businessName;
+ db.adminPassword=document.getElementById("setPass").value||db.adminPassword;
+ db.opening=document.getElementById("setOpen").value||db.opening;
+ db.closing=document.getElementById("setClose").value||db.closing;
+ save();render();showAdmin("settings");alert("Settings saved.");
+}
+document.getElementById("date").min=new Date().toISOString().split("T")[0];
+render();
+</script>
+</body>
+</html>
